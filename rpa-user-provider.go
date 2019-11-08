@@ -10,13 +10,13 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/synerex/synerex_alpha/api/rpa"
+	rpa "github.com/synerex/proto_rpa"
 
 	gosocketio "github.com/mtfelian/golang-socketio"
 	"github.com/tidwall/gjson"
 
-	"github.com/synerex/synerex_alpha/api"
-	"github.com/synerex/synerex_alpha/sxutil"
+	api "github.com/synerex/synerex_api"
+	sxutil "github.com/synerex/synerex_sxutil"
 	"google.golang.org/grpc"
 )
 
