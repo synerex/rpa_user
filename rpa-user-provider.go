@@ -11,30 +11,39 @@ import (
 	"sync"
 
 	rpa "github.com/synerex/proto_rpa"
+<<<<<<< Updated upstream
+=======
+	api "github.com/synerex/synerex_api"
+	proto "github.com/synerex/synerex_proto"
+>>>>>>> Stashed changes
 
 	gosocketio "github.com/mtfelian/golang-socketio"
 	"github.com/tidwall/gjson"
 
+<<<<<<< Updated upstream
 	api "github.com/synerex/synerex_api"
 	sxutil "github.com/synerex/synerex_sxutil"
 	"google.golang.org/grpc"
+=======
+	sxutil "github.com/synerex/synerex_sxutil"
+>>>>>>> Stashed changes
 )
 
 var (
-	serverAddr = flag.String("server_addr", "127.0.0.1:10000", "The server address in the format of host:port")
-	nodesrv    = flag.String("nodesrv", "127.0.0.1:9990", "Node ID Server")
-	spMap      map[uint64]*api.Supply
-	mu         sync.RWMutex
-	port       = flag.Int("port", 8888, "RPA User Provider Listening Port")
-	server     = gosocketio.NewServer()
-	rm         *rpa.MeetingService
+	nodesrv         = flag.String("nodesrv", "127.0.0.1:9990", "Node ID Server")
+	spMap           map[uint64]*api.Supply
+	mu              sync.RWMutex
+	port            = flag.Int("port", 8888, "RPA User Provider Listening Port")
+	server          = gosocketio.NewServer()
+	rm              *rpa.MeetingService
+	sxServerAddress string
 )
 
 func init() {
 	spMap = make(map[uint64]*api.Supply)
 }
 
-func confirmBooking(clt *sxutil.SMServiceClient, sp *api.Supply) {
+func confirmBooking(clt *sxutil.SXServiceClient, sp *api.Supply) {
 	spMap[sp.Id] = sp
 
 	// emit to client
@@ -86,7 +95,7 @@ func setMeetingService(json string) {
 	}
 }
 
-func supplyCallback(clt *sxutil.SMServiceClient, sp *api.Supply) {
+func supplyCallback(clt *sxutil.SXServiceClient, sp *api.Supply) {
 	log.Println("Got RPA User supply callback")
 	setMeetingService(sp.ArgJson)
 
@@ -110,7 +119,7 @@ func supplyCallback(clt *sxutil.SMServiceClient, sp *api.Supply) {
 	}
 }
 
-func subscribeSupply(client *sxutil.SMServiceClient) {
+func subscribeSupply(client *sxutil.SXServiceClient) {
 	//called as goroutine
 	ctx := context.Background() // should check proper context
 	client.SubscribeSupply(ctx, supplyCallback)
@@ -118,7 +127,7 @@ func subscribeSupply(client *sxutil.SMServiceClient) {
 	log.Println("SMarket Server Closed?")
 }
 
-func runSocketIOServer(sclient *sxutil.SMServiceClient) {
+func runSocketIOServer(sclient *sxutil.SXServiceClient) {
 	server.On(gosocketio.OnConnection, func(c *gosocketio.Channel) {
 		log.Printf("Connected %s\n", c.Id())
 	})
@@ -165,33 +174,34 @@ func runSocketIOServer(sclient *sxutil.SMServiceClient) {
 	}
 }
 
-func sendDemand(sclient *sxutil.SMServiceClient, nm string, js string) {
+func sendDemand(sclient *sxutil.SXServiceClient, nm string, js string) {
 	opts := &sxutil.DemandOpts{Name: nm, JSON: js}
 	mu.Lock()
-	id := sclient.RegisterDemand(opts)
+	//TODO: should cover error for demand.
+	id, _ := sclient.NotifyDemand(opts)
 	mu.Unlock()
 	log.Printf("Register meeting demand as id:%v\n", id)
 }
 
 func main() {
 	flag.Parse()
-	sxutil.RegisterNodeName(*nodesrv, "RPAUserProvider", false)
 
 	go sxutil.HandleSigInt()
 	sxutil.RegisterDeferFunction(sxutil.UnRegisterNode)
 
-	var opts []grpc.DialOption
-	wg := sync.WaitGroup{} // for syncing other goroutines
-
-	opts = append(opts, grpc.WithInsecure())
-	conn, err := grpc.Dial(*serverAddr, opts...)
+	channelTypes := []uint32{proto.MEETING_SERVICE}
+	// obtain synerex server address from nodeserv
+	srv, err := sxutil.RegisterNode(*nodesrv, "RPAUserProvider", channelTypes, nil)
 	if err != nil {
-		log.Fatalf("fail to dial: %v", err)
+		log.Fatal("Can't register node...")
 	}
+	log.Printf("Connecting Server [%s]\n", srv)
 
-	client := api.NewSynerexClient(conn)
-	argJson := fmt.Sprintf("{Client: RPAUser}")
-	sclient := sxutil.NewSMServiceClient(client, api.ChannelType_MEETING_SERVICE, argJson)
+	wg := sync.WaitGroup{} // for syncing other goroutines
+	sxServerAddress = srv
+	client := sxutil.GrpcConnectServer(srv)
+	argJson := fmt.Sprintf("{Client:RPAUser}")
+	sclient := sxutil.NewSXServiceClient(client, proto.MEETING_SERVICE, argJson)
 
 	wg.Add(1)
 	go subscribeSupply(sclient)
