@@ -11,11 +11,12 @@ import (
 	"sync"
 
 	rpa "github.com/synerex/proto_rpa"
+	api "github.com/synerex/synerex_api"
+	proto "github.com/synerex/synerex_proto"
 
 	gosocketio "github.com/mtfelian/golang-socketio"
 	"github.com/tidwall/gjson"
 
-	api "github.com/synerex/synerex_api"
 	sxutil "github.com/synerex/synerex_sxutil"
 )
 
