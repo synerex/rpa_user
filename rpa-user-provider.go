@@ -11,22 +11,12 @@ import (
 	"sync"
 
 	rpa "github.com/synerex/proto_rpa"
-<<<<<<< Updated upstream
-=======
-	api "github.com/synerex/synerex_api"
-	proto "github.com/synerex/synerex_proto"
->>>>>>> Stashed changes
 
 	gosocketio "github.com/mtfelian/golang-socketio"
 	"github.com/tidwall/gjson"
 
-<<<<<<< Updated upstream
 	api "github.com/synerex/synerex_api"
 	sxutil "github.com/synerex/synerex_sxutil"
-	"google.golang.org/grpc"
-=======
-	sxutil "github.com/synerex/synerex_sxutil"
->>>>>>> Stashed changes
 )
 
 var (
