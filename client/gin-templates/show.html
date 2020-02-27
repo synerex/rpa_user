@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Show</title>
+</head>
+
+<body>
+    <form action="/update/{{.user.ID}}" method="post" enctype="multipart/form-data">
+        <p>You can update your account information.</p>
+        <label>Username:</label>
+        <input name="username" type="text" value="{{.user.Username}}" required>
+        <label>Password</label>
+        <input name="password" type="password" required>
+        <input type="submit" value="Update">
+        <a href="/users">Cancel</a>
+    </form>
+</body>
+
+</html>

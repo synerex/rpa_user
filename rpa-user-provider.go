@@ -8,16 +8,23 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
+
+	"github.com/jinzhu/gorm"
+	"golang.org/x/crypto/bcrypt"
 
 	rpa "github.com/synerex/proto_rpa"
 	api "github.com/synerex/synerex_api"
 	proto "github.com/synerex/synerex_proto"
+	sxutil "github.com/synerex/synerex_sxutil"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-gonic/gin"
+	_ "github.com/mattn/go-sqlite3"
 	gosocketio "github.com/mtfelian/golang-socketio"
 	"github.com/tidwall/gjson"
-
-	sxutil "github.com/synerex/synerex_sxutil"
 )
 
 var (
@@ -174,6 +181,287 @@ func sendDemand(sclient *sxutil.SXServiceClient, nm string, js string) {
 	log.Printf("Register meeting demand as id:%v\n", id)
 }
 
+// Web Framework Gin
+func runGinServer() {
+	gin.SetMode(gin.ReleaseMode)
+
+	route := gin.Default()
+
+	// init User DB
+	initUserDB()
+
+	// Template
+	route.LoadHTMLGlob("client/gin-templates/*.html")
+
+	// Session
+	store := cookie.NewStore([]byte("secret"))
+	route.Use(sessions.Sessions("mysession", store))
+
+	// Create
+	route.GET("/new", func(c *gin.Context) {
+		c.HTML(200, "new.html", gin.H{})
+	})
+	route.POST("/new", func(c *gin.Context) {
+		username := c.PostForm("username")
+		password := c.PostForm("password")
+		if isIdenticalUsername(username) {
+			insertUser(username, password)
+			c.HTML(200, "login.html", gin.H{
+				"username": username,
+				"message":  "Please login using the previous information.",
+			})
+		} else {
+			c.HTML(http.StatusBadRequest, "new.html", gin.H{"message": "Invalid username"})
+		}
+	})
+
+	// Login
+	route.POST("/login", login)
+	route.GET("/logout", logout)
+	authorized := route.Group("/")
+	authorized.Use(AuthRequired())
+	{
+		authorized.GET("/", func(c *gin.Context) {
+			c.HTML(200, "index.html", gin.H{"message": "You are authorized now."})
+		})
+
+		// Index
+		authorized.GET("/users", func(c *gin.Context) {
+			users := getAllUser()
+			c.HTML(200, "users.html", gin.H{
+				"users": users,
+			})
+		})
+
+		// Show
+		authorized.GET("/show/:id", func(c *gin.Context) {
+			p := c.Param("id")
+			id, err := strconv.Atoi(p)
+			if err != nil {
+				fmt.Println("Failed to strconv:", err)
+			}
+			user := getOneUser(id)
+			c.HTML(200, "show.html", gin.H{
+				"user": user,
+			})
+		})
+
+		// Update
+		authorized.POST("/update/:id", func(c *gin.Context) {
+			p := c.Param("id")
+			id, err := strconv.Atoi(p)
+			if err != nil {
+				fmt.Println("Failed to strconve:", err)
+			}
+			username := c.PostForm("username")
+			password := c.PostForm("password")
+			updateUser(id, username, password)
+			c.Redirect(302, "/")
+		})
+
+		// Confirm Delete
+		authorized.GET("/confirm_delete/:id", func(c *gin.Context) {
+			p := c.Param("id")
+			id, err := strconv.Atoi(p)
+			if err != nil {
+				fmt.Println("Failed to strconv:", err)
+			}
+			user := getOneUser(id)
+			c.HTML(200, "delete.html", gin.H{
+				"user": user,
+			})
+		})
+
+		// Delete
+		authorized.POST("/delete/:id", func(c *gin.Context) {
+			p := c.Param("id")
+			id, err := strconv.Atoi(p)
+			if err != nil {
+				fmt.Println("Failed to strconv:", err)
+			}
+			deleteUser(id)
+
+			session := sessions.Default(c)
+			user := session.Get("user")
+			if user == nil {
+				c.JSON(400, gin.H{"error": "Invalid session token"})
+			} else {
+				session.Delete("user")
+				session.Save()
+			}
+			c.Redirect(302, "/")
+		})
+	}
+
+	route.Run(":8889")
+}
+
+func AuthRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session := sessions.Default(c)
+		user := session.Get("user")
+		if user == nil {
+			c.HTML(http.StatusUnauthorized, "login.html", gin.H{"message": "You must login first."})
+			c.Abort()
+		} else {
+			c.Next()
+		}
+	}
+}
+
+func login(c *gin.Context) {
+	session := sessions.Default(c)
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+
+	if strings.Trim(username, " ") == "" || strings.Trim(password, " ") == "" {
+		c.HTML(http.StatusBadRequest, "login.html", gin.H{"message": "Parameters cannot be empty."})
+		return
+	}
+
+	user := getOneUser(int(getUserIDFromName(username)))
+	if username == user.Username {
+		if err := verify(user.Password, password); err != nil {
+			c.HTML(http.StatusUnauthorized, "login.html", gin.H{"message": "Authentication failed"})
+		} else {
+			session.Set("user", username)
+			err := session.Save()
+			if err != nil {
+				fmt.Println("Failed to generate session token:", err)
+				c.HTML(http.StatusInternalServerError, "login.html", gin.H{"message": "Failed to login."})
+			} else {
+				c.Redirect(302, "/")
+			}
+		}
+	} else {
+		c.HTML(http.StatusUnauthorized, "login.html", gin.H{"message": "Authentication failed"})
+	}
+}
+
+func logout(c *gin.Context) {
+	session := sessions.Default(c)
+	user := session.Get("user")
+	if user == nil {
+		c.JSON(400, gin.H{"error": "Invalid session token"})
+	} else {
+		fmt.Println("Logged out:", user)
+		session.Delete("user")
+		session.Save()
+		c.Redirect(302, "/")
+	}
+}
+
+func hash(pass string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), err
+}
+
+func verify(hash, pass string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(pass))
+}
+
+type User struct {
+	gorm.Model
+	Username string
+	Password string
+}
+
+func initUserDB() {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
+	if err != nil {
+		fmt.Println("Failed to open gorm:", err)
+	}
+	db.AutoMigrate(&User{})
+	defer db.Close()
+}
+
+func insertUser(username string, password string) {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
+	if err != nil {
+		fmt.Println("Failed to open gorm:", err)
+	}
+	hash, err := hash(password)
+	if err != nil {
+		fmt.Println("Failed to hash at insertUser:", err)
+	}
+	db.Create(&User{Username: username, Password: hash})
+	defer db.Close()
+}
+
+func updateUser(id int, username string, password string) {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
+	if err != nil {
+		fmt.Println("Failed to open gorm:", err)
+	}
+	hash, err := hash(password)
+	if err != nil {
+		fmt.Println("Failed to hash at updateUser:", err)
+	}
+	var user User
+	db.First(&user, id)
+	user.Username = username
+	user.Password = hash
+	db.Save(&user)
+	defer db.Close()
+}
+
+func deleteUser(id int) {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
+	if err != nil {
+		fmt.Println("Failed to open gorm:", err)
+	}
+	var user User
+	db.First(&user)
+	db.Delete(&user)
+	defer db.Close()
+}
+
+func getAllUser() []User {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
+	if err != nil {
+		fmt.Println("Failed to open gorm:", err)
+	}
+	var users []User
+	db.Order("created_at desc").Find(&users)
+	db.Close()
+	return users
+}
+
+func getOneUser(id int) User {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
+	if err != nil {
+		fmt.Println("Failed to open gorm:", err)
+	}
+	var user User
+	db.First(&user, id)
+	db.Close()
+	return user
+}
+
+func getUserIDFromName(username string) uint {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
+	if err != nil {
+		fmt.Println("Failed to open gorm:", err)
+	}
+	var user User
+	db.Where("username = ?", username).First(&user)
+	db.Close()
+	return user.ID
+}
+
+func isIdenticalUsername(username string) bool {
+	users := getAllUser()
+	for _, user := range users {
+		if user.Username == username {
+			return false
+		}
+	}
+	return true
+}
+
 func main() {
 	flag.Parse()
 
@@ -199,6 +487,9 @@ func main() {
 
 	wg.Add(1)
 	go runSocketIOServer(sclient)
+
+	wg.Add(1)
+	go runGinServer()
 
 	wg.Wait()
 	sxutil.CallDeferFunctions() // cleanup!

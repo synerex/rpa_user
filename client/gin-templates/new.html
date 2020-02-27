@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Create</title>
+</head>
+
+<body>
+    <p>{{.message}}</p>
+    <form action="/new" method="post" enctype="multipart/form-data">
+        <h2>Create New User</h2>
+        <label>Username:</label>
+        <input name="username" type="text" required>
+        <label>Password</label>
+        <input name="password" type="password" required>
+        <input type="submit" value="Create">
+    </form>
+    <p><a href="/">Back</a></p>
+</body>
+
+</html>
