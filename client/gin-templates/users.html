@@ -9,13 +9,14 @@
 <body>
     <p>Users</p>
     <ul>
-        {{ range .users }}
+        {{range .users}}
         <li>Username: {{ .Username }}
-            <label><a href="/show/{{.ID}}">編集</a></label>
-            <label><a href="/confirm_delete/{{.ID}}">削除</a></label>
+            <a href="/show/{{.ID}}">Show</a>
+            <a href="/confirm_delete/{{.ID}}">Delete</a>
         </li>
         {{end}}
     </ul>
+    <a href="/">Back</a>
 </body>
 
 </html>

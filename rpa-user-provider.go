@@ -31,10 +31,11 @@ var (
 	nodesrv         = flag.String("nodesrv", "127.0.0.1:9990", "Node ID Server")
 	spMap           map[uint64]*api.Supply
 	mu              sync.RWMutex
-	port            = flag.Int("port", 8888, "RPA User Provider Listening Port")
+	port            = flag.Int("port", 7777, "RPA User Provider Listening Port")
 	server          = gosocketio.NewServer()
 	rm              *rpa.MeetingService
 	sxServerAddress string
+	uid             uint
 )
 
 func init() {
@@ -142,6 +143,10 @@ func runSocketIOServer(sclient *sxutil.SXServiceClient) {
 		end := gjson.Get(st, "End").String()
 		people := gjson.Get(st, "People").String()
 		title := gjson.Get(st, "Title").String()
+
+		// insert record to db
+		insertReservation(year, month, day, week, start, end, people, title, uid)
+
 		rm := rpa.MeetingService{
 			Cid:    c.Id(),
 			Status: "checking",
@@ -186,6 +191,7 @@ func runGinServer() {
 	gin.SetMode(gin.ReleaseMode)
 
 	route := gin.Default()
+	log.Println("Starting User Server at localhost:8888")
 
 	// init User DB
 	initUserDB()
@@ -241,23 +247,25 @@ func runGinServer() {
 				fmt.Println("Failed to strconv:", err)
 			}
 			user := getOneUser(id)
+			reservations := getAllReservations(id)
 			c.HTML(200, "show.html", gin.H{
-				"user": user,
+				"user":         user,
+				"reservations": reservations,
 			})
 		})
 
-		// Update
-		authorized.POST("/update/:id", func(c *gin.Context) {
-			p := c.Param("id")
-			id, err := strconv.Atoi(p)
-			if err != nil {
-				fmt.Println("Failed to strconve:", err)
-			}
-			username := c.PostForm("username")
-			password := c.PostForm("password")
-			updateUser(id, username, password)
-			c.Redirect(302, "/")
-		})
+		// // Update
+		// authorized.POST("/update/:id", func(c *gin.Context) {
+		// 	p := c.Param("id")
+		// 	id, err := strconv.Atoi(p)
+		// 	if err != nil {
+		// 		fmt.Println("Failed to strconve:", err)
+		// 	}
+		// 	username := c.PostForm("username")
+		// 	password := c.PostForm("password")
+		// 	updateUser(id, username, password)
+		// 	c.Redirect(302, "/")
+		// })
 
 		// Confirm Delete
 		authorized.GET("/confirm_delete/:id", func(c *gin.Context) {
@@ -270,6 +278,17 @@ func runGinServer() {
 			c.HTML(200, "delete.html", gin.H{
 				"user": user,
 			})
+		})
+
+		// Cancel Reservation
+		authorized.POST("/cancel/:id", func(c *gin.Context) {
+			p := c.Param("id")
+			id, err := strconv.Atoi(p)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			cancelReservation(id)
+			c.Redirect(302, "/users")
 		})
 
 		// Delete
@@ -293,7 +312,7 @@ func runGinServer() {
 		})
 	}
 
-	route.Run(":8889")
+	route.Run(":8888")
 }
 
 func AuthRequired() gin.HandlerFunc {
@@ -319,7 +338,8 @@ func login(c *gin.Context) {
 		return
 	}
 
-	user := getOneUser(int(getUserIDFromName(username)))
+	uid = getUserIDFromName(username)
+	user := getOneUser(int(uid))
 	if username == user.Username {
 		if err := verify(user.Password, password); err != nil {
 			c.HTML(http.StatusUnauthorized, "login.html", gin.H{"message": "Authentication failed"})
@@ -330,7 +350,7 @@ func login(c *gin.Context) {
 				fmt.Println("Failed to generate session token:", err)
 				c.HTML(http.StatusInternalServerError, "login.html", gin.H{"message": "Failed to login."})
 			} else {
-				c.Redirect(302, "/")
+				c.Redirect(302, "http://localhost:7777/")
 			}
 		}
 	} else {
@@ -365,8 +385,23 @@ func verify(hash, pass string) error {
 
 type User struct {
 	gorm.Model
-	Username string
-	Password string
+	Username     string
+	Password     string
+	Reservations []Reservation
+}
+type Reservation struct {
+	gorm.Model
+	Year     string
+	Month    string
+	Day      string
+	Week     string
+	Start    string
+	End      string
+	People   string
+	Title    string
+	RoomName string
+	Active   bool
+	UserID   uint
 }
 
 func initUserDB() {
@@ -374,7 +409,13 @@ func initUserDB() {
 	if err != nil {
 		fmt.Println("Failed to open gorm:", err)
 	}
+
+	// テーブルが存在していた場合は削除
+	db.DropTableIfExists(&User{})
+	db.DropTableIfExists(&Reservation{})
+
 	db.AutoMigrate(&User{})
+	db.AutoMigrate(&Reservation{})
 	defer db.Close()
 }
 
@@ -391,20 +432,52 @@ func insertUser(username string, password string) {
 	defer db.Close()
 }
 
-func updateUser(id int, username string, password string) {
+func insertReservation(year string, month string, day string, week string, start string, end string, people string, title string, uid uint) {
 	db, err := gorm.Open("sqlite3", "user.sqlite3")
 	if err != nil {
 		fmt.Println("Failed to open gorm:", err)
 	}
-	hash, err := hash(password)
+	db.Create(&Reservation{
+		Year:   year,
+		Month:  month,
+		Day:    day,
+		Week:   week,
+		Start:  start,
+		End:    end,
+		People: people,
+		Title:  title,
+		Active: true,
+		UserID: uid,
+	})
+	defer db.Close()
+}
+
+// func updateUser(id int, username string, password string) {
+// 	db, err := gorm.Open("sqlite3", "user.sqlite3")
+// 	if err != nil {
+// 		fmt.Println("Failed to open gorm:", err)
+// 	}
+// 	hash, err := hash(password)
+// 	if err != nil {
+// 		fmt.Println("Failed to hash at updateUser:", err)
+// 	}
+// 	var user User
+// 	db.First(&user, id)
+// 	user.Username = username
+// 	user.Password = hash
+// 	db.Save(&user)
+// 	defer db.Close()
+// }
+
+func cancelReservation(id int) {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
 	if err != nil {
-		fmt.Println("Failed to hash at updateUser:", err)
+		fmt.Println("Failed to open gorm:", err)
 	}
-	var user User
-	db.First(&user, id)
-	user.Username = username
-	user.Password = hash
-	db.Save(&user)
+	var reservation Reservation
+	db.First(&reservation, id)
+	reservation.Active = false
+	db.Save(&reservation)
 	defer db.Close()
 }
 
@@ -415,6 +488,7 @@ func deleteUser(id int) {
 	}
 	var user User
 	db.First(&user)
+	db.Preload("Reservations").Where("user_id = ?", user.ID).Delete(&user.Reservations)
 	db.Delete(&user)
 	defer db.Close()
 }
@@ -439,6 +513,28 @@ func getOneUser(id int) User {
 	db.First(&user, id)
 	db.Close()
 	return user
+}
+
+func getAllReservations(userid int) []Reservation {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
+	if err != nil {
+		fmt.Println("Failed to open gorm:", err)
+	}
+	var reservations []Reservation
+	user := getOneUser(userid)
+	db.Model(&user).Related(&reservations)
+	return reservations
+}
+
+func getOneReservation(id int) Reservation {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
+	if err != nil {
+		fmt.Println("Failed to open gorm:", err)
+	}
+	var reservation Reservation
+	db.First(&reservation, id)
+	db.Close()
+	return reservation
 }
 
 func getUserIDFromName(username string) uint {

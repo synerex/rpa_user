@@ -19,7 +19,7 @@ $(() => {
         var obj = JSON.parse(json)
 
         var contents = `
-            <p>${obj.room}<span><button type="button" id="yes" data-id="${obj.id}" class="btn btn-primary">Select</button></span></p>
+            <li>${obj.room}<span><button type="button" id="yes" data-id="${obj.id}" class="btn btn-primary">Select</button></span></li>
         `;
         booking_options.append(contents);
     });

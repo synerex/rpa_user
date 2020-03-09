@@ -7,15 +7,22 @@
 </head>
 
 <body>
-    <form action="/update/{{.user.ID}}" method="post" enctype="multipart/form-data">
-        <p>You can update your account information.</p>
-        <label>Username:</label>
-        <input name="username" type="text" value="{{.user.Username}}" required>
-        <label>Password</label>
-        <input name="password" type="password" required>
-        <input type="submit" value="Update">
-        <a href="/users">Cancel</a>
-    </form>
+    <p>Username(id): {{.user.Username}}({{.user.ID}})</p>
+    <p>Reservations:
+        <ul>
+            {{range .reservations}}
+            <li>
+                {{.Year}}/{{.Month}}/{{.Day}} {{.Week}} {{.Start}}~{{.End}} {{.People}}人 {{.Title}} 予約中:{{.Active}}
+                {{if eq .Active true}}
+                <form method="post" action="/cancel/{{.ID}}">
+                    <input type="submit" value="この予約をキャンセルする">
+                </form>
+                {{end}}
+            </li>
+            {{end}}
+        </ul>
+    </p>
+    <a href="/users">Back</a>
 </body>
 
 </html>
