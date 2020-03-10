@@ -16,3 +16,6 @@ rpa-user-provider
 
 # Go module file
 go.sum
+
+# sqlite3
+*.sqlite3
