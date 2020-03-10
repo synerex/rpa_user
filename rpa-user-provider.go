@@ -411,8 +411,8 @@ func initUserDB() {
 	}
 
 	// テーブルが存在していた場合は削除
-	db.DropTableIfExists(&User{})
-	db.DropTableIfExists(&Reservation{})
+	// db.DropTableIfExists(&User{})
+	// db.DropTableIfExists(&Reservation{})
 
 	db.AutoMigrate(&User{})
 	db.AutoMigrate(&Reservation{})
