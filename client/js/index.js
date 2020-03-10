@@ -7,6 +7,7 @@ $(() => {
         var list = `<li>Success booking: ${data.arg_json}</li>`;
         booking_results.append(list);
 
+        $("#status").empty();
         $("#booking_options").empty();
 
         resetValues();
@@ -22,6 +23,7 @@ $(() => {
             <li>${obj.room}<span><button type="button" id="yes" data-id="${obj.id}" class="btn btn-primary">Select</button></span></li>
         `;
         booking_options.append(contents);
+        $("#status").empty();
     });
 
     $(document).on("click", "#yes", (e) => {
@@ -34,6 +36,10 @@ $(() => {
         e.preventDefault();
         changeAllProps();
 
+        var status = $("#status");
+        var message = "<p>Waiting...</p>";
+        status.append(message);
+
         var date = $("#booking-date").val();
         var start = $("#booking-start").val();
         var end = $("#booking-end").val();
@@ -42,6 +48,7 @@ $(() => {
 
         if (date == "" || start == "" || end == "") {
             changeAllProps();
+            status.empty();
             console.log("You must set the date and time.")
         } else {
             var splits = date.split(' ');
