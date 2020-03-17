@@ -12,7 +12,7 @@
 *.out
 
 # Binaries for server, providers, cli tool
-rpa-user-provider
+rpa_user
 
 # Go module file
 go.sum
