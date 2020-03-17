@@ -1,4 +1,4 @@
-module rpa-user-provider
+module github.com/synerex/rpa_user
 
 go 1.12
 
