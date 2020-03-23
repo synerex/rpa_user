@@ -402,6 +402,14 @@ type Reservation struct {
 	RoomName string
 	Active   bool
 	UserID   uint
+	Proposes []Propose
+}
+type Propose struct {
+	gorm.Model
+	ServiceName   string
+	RoomName      string
+	UserID        uint
+	ReservationID uint
 }
 
 func initUserDB() {
@@ -413,9 +421,11 @@ func initUserDB() {
 	// テーブルが存在していた場合は削除
 	// db.DropTableIfExists(&User{})
 	// db.DropTableIfExists(&Reservation{})
+	// db.DropTableIfExists(&Propose{})
 
 	db.AutoMigrate(&User{})
 	db.AutoMigrate(&Reservation{})
+	db.AutoMigrate(&Propose{})
 	defer db.Close()
 }
 
@@ -448,6 +458,20 @@ func insertReservation(year string, month string, day string, week string, start
 		Title:  title,
 		Active: true,
 		UserID: uid,
+	})
+	defer db.Close()
+}
+
+func insertPropose(service string, room string, uid uint, rid uint) {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	db.Create(&Propose{
+		ServiceName:   service,
+		RoomName:      room,
+		UserID:        uid,
+		ReservationID: rid,
 	})
 	defer db.Close()
 }
@@ -487,8 +511,11 @@ func deleteUser(id int) {
 		fmt.Println("Failed to open gorm:", err)
 	}
 	var user User
+	var reservation Reservation
+	var propose Propose
 	db.First(&user)
-	db.Preload("Reservations").Where("user_id = ?", user.ID).Delete(&user.Reservations)
+	db.Where("user_id = ?", user.ID).Delete(&reservation)
+	db.Where("user_id = ?", user.ID).Delete(&propose)
 	db.Delete(&user)
 	defer db.Close()
 }
