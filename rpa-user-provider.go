@@ -197,6 +197,7 @@ func runGinServer() {
 	initUserDB()
 
 	// Template
+	route.Static("client", "./client")
 	route.LoadHTMLGlob("client/gin-templates/*.html")
 
 	// Session
@@ -212,9 +213,8 @@ func runGinServer() {
 		password := c.PostForm("password")
 		if isIdenticalUsername(username) {
 			insertUser(username, password)
-			c.HTML(200, "login.html", gin.H{
+			c.HTML(200, "lockscreen.html", gin.H{
 				"username": username,
-				"message":  "Please login using the previous information.",
 			})
 		} else {
 			c.HTML(http.StatusBadRequest, "new.html", gin.H{"message": "Invalid username"})
@@ -222,6 +222,9 @@ func runGinServer() {
 	})
 
 	// Login
+	route.GET("/login", func(c *gin.Context) {
+		c.HTML(200, "login.html", gin.H{"message": ""})
+	})
 	route.POST("/login", login)
 	route.GET("/logout", logout)
 	authorized := route.Group("/")
