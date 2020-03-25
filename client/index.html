@@ -18,6 +18,11 @@ scratch. This page gets rid of all links and provides the needed markup only.
   <link rel="stylesheet" href="dist/css/adminlte.min.css">
   <!-- Google Font: Source Sans Pro -->
   <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
+  <!-- Original -->
+  <link rel="stylesheet" href="css/pickadate/classic.css">
+  <link rel="stylesheet" href="css/pickadate/classic.date.css">
+  <link rel="stylesheet" href="css/pickadate/classic.time.css">
+  <link rel="stylesheet" href="css/index.css">
 </head>
 
 <body class="hold-transition sidebar-mini">
@@ -31,10 +36,10 @@ scratch. This page gets rid of all links and provides the needed markup only.
           <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
         </li>
         <li class="nav-item d-none d-sm-inline-block">
-          <a href="#" class="nav-link">Home</a>
+          <a href="http://localhost:7777/" class="nav-link">Home</a>
         </li>
         <li class="nav-item d-none d-sm-inline-block">
-          <a href="#" class="nav-link">Contact</a>
+          <a href="http://localhost:8888/users" class="nav-link">Users</a>
         </li>
       </ul>
 
@@ -79,27 +84,15 @@ scratch. This page gets rid of all links and provides the needed markup only.
               </a>
               <ul class="nav nav-treeview">
                 <li class="nav-item">
-                  <a href="#" class="nav-link active">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Active Page</p>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a href="#" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Inactive Page</p>
+                  <a href="calendar.html" class="nav-link">
+                    <i class="nav-icon far fa-calendar-alt"></i>
+                    <p>
+                      Calendar
+                      <span class="badge badge-info right">2</span>
+                    </p>
                   </a>
                 </li>
               </ul>
-            </li>
-            <li class="nav-item">
-              <a href="#" class="nav-link">
-                <i class="nav-icon fas fa-th"></i>
-                <p>
-                  Simple Link
-                  <span class="right badge badge-danger">New</span>
-                </p>
-              </a>
             </li>
           </ul>
         </nav>
@@ -119,7 +112,7 @@ scratch. This page gets rid of all links and provides the needed markup only.
             </div><!-- /.col -->
             <div class="col-sm-6">
               <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="#">Home</a></li>
+                <li class="breadcrumb-item"><a href="http://localhost:7777/">Home</a></li>
                 <li class="breadcrumb-item active">Meeting Page</li>
               </ol>
             </div><!-- /.col -->
@@ -132,59 +125,89 @@ scratch. This page gets rid of all links and provides the needed markup only.
       <div class="content">
         <div class="container-fluid">
           <div class="row">
-            <div class="col-lg-6">
-              <div class="card">
-                <div class="card-body">
-                  <h5 class="card-title">Card title</h5>
+            <div class="col-lg-4">
 
-                  <p class="card-text">
-                    Some quick example text to build on the card title and make up the bulk of the card's
-                    content.
-                  </p>
-
-                  <a href="#" class="card-link">Card link</a>
-                  <a href="#" class="card-link">Another link</a>
+              <div class="card card-primary">
+                <div class="card-header">
+                  <h3 class="card-title">Search Rooms</h3>
                 </div>
+                <!-- /.card-header -->
+                <!-- form start -->
+                <form id="booking_form" role="form">
+                  <div class="card-body">
+                    <div class="form-group">
+                      <label for="booking-date">Date</label>
+                      <input type="text" class="datepicker form-control" id="booking-date">
+                    </div>
+                    <div class="form-group">
+                      <label for="booking-start">Start</label>
+                      <input type="text" class="timepicker form-control" id="booking-start">
+                    </div>
+                    <div class="form-group">
+                      <label for="booking-end">End</label>
+                      <input type="text" class="timepicker form-control" id="booking-end">
+                    </div>
+                    <div class="form-group">
+                      <label for="number-people">People</label>
+                      <input type="number" class="form-control" id="number-people" min="0" max="100">
+                    </div>
+                    <div class="form-group">
+                      <label for="booking-title">Title</label>
+                      <input type="text" class="form-control" id="booking-title">
+                    </div>
+
+                  </div>
+                  <!-- /.card-body -->
+
+                  <div class="card-footer">
+                    <button type="submit" id="send" class="btn btn-primary">Search</button>
+                  </div>
+                </form>
               </div>
 
-              <div class="card card-primary card-outline">
-                <div class="card-body">
-                  <h5 class="card-title">Card title</h5>
-
-                  <p class="card-text">
-                    Some quick example text to build on the card title and make up the bulk of the card's
-                    content.
-                  </p>
-                  <a href="#" class="card-link">Card link</a>
-                  <a href="#" class="card-link">Another link</a>
-                </div>
-              </div><!-- /.card -->
             </div>
             <!-- /.col-md-6 -->
-            <div class="col-lg-6">
+            <div class="col-lg-8">
+
               <div class="card">
-                <div class="card-header">
-                  <h5 class="m-0">Featured</h5>
-                </div>
-                <div class="card-body">
-                  <h6 class="card-title">Special title treatment</h6>
+                <div class="card-header border-transparent">
+                  <h3 class="card-title">Proposed Rooms</h3>
 
-                  <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
-                  <a href="#" class="btn btn-primary">Go somewhere</a>
+                  <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                      <i class="fas fa-minus"></i>
+                    </button>
+                  </div>
                 </div>
+                <!-- /.card-header -->
+                <div class="card-body p-0">
+                  <div class="table-responsive">
+                    <table class="table m-0">
+                      <thead>
+                        <tr>
+                          <th>Order ID</th>
+                          <th>Item</th>
+                          <th>Status</th>
+                          <th>Popularity</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><a href="pages/examples/invoice.html">OR9842</a></td>
+                          <td>Call of Duty IV</td>
+                          <td><span class="badge badge-success">Shipped</span></td>
+                          <td>
+                            <div class="sparkbar" data-color="#00a65a" data-height="20">90,80,90,-70,61,-83,63</div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <!-- /.table-responsive -->
+                </div>
+                <!-- /.card-body -->
               </div>
 
-              <div class="card card-primary card-outline">
-                <div class="card-header">
-                  <h5 class="m-0">Featured</h5>
-                </div>
-                <div class="card-body">
-                  <h6 class="card-title">Special title treatment</h6>
-
-                  <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
-                  <a href="#" class="btn btn-primary">Go somewhere</a>
-                </div>
-              </div>
             </div>
             <!-- /.col-md-6 -->
           </div>
@@ -211,7 +234,8 @@ scratch. This page gets rid of all links and provides the needed markup only.
       <div class="float-right d-none d-sm-inline">
       </div>
       <!-- Default to the left -->
-      <strong>Copyright &copy; 2019 <a href="https://github.com/synerex/synerex_beta.git">Synerex Beta</a> Service Integration Platform for Smart Cities and Society 5.0.</strong>
+      <strong>Copyright &copy; 2019 <a href="https://github.com/synerex/synerex_beta.git">Synerex Beta</a> Service
+        Integration Platform for Smart Cities and Society 5.0.</strong>
     </footer>
   </div>
   <!-- ./wrapper -->
@@ -224,6 +248,16 @@ scratch. This page gets rid of all links and provides the needed markup only.
   <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
   <!-- AdminLTE App -->
   <script src="dist/js/adminlte.min.js"></script>
+  <!-- Original -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src="js/jquery-ui.min.js"></script>
+  <script src="js/pickadate/legacy.js"></script>
+  <script src="js/pickadate/picker.js"></script>
+  <script src="js/pickadate/picker.date.js"></script>
+  <script src="js/pickadate/picker.time.js"></script>
+  <script src="js/pickadate/ja_JP.js"></script>
+  <script src="js/index.js"></script>
 </body>
 
 </html>
