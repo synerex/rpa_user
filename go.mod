@@ -17,7 +17,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/mtfelian/golang-socketio v1.5.2
 	github.com/stretchr/objx v0.2.0 // indirect
-	github.com/synerex/proto_rpa v0.0.2
+	github.com/synerex/proto_rpa v0.0.3
 	github.com/synerex/synerex_api v0.1.1
 	github.com/synerex/synerex_proto v0.1.3
 	github.com/synerex/synerex_sxutil v0.3.10
