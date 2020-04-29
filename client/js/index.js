@@ -8,20 +8,22 @@ $(() => {
         booking_results.append(list);
 
         $("#status").empty();
-        $("#booking_options").empty();
+        $("#booking_options > tbody").empty();
 
         resetValues();
         changeAllProps();
     });
 
     socket.on("check_booking", (json) => {
-        var booking_options = $("#booking_options");
+        var booking_options = $("#booking_options > tbody");
 
         var obj = JSON.parse(json)
+        var rooms = JSON.parse(obj.room)
 
-        var contents = `
-            <li>${obj.room}<span><button type="button" id="yes" data-id="${obj.id}" class="btn btn-primary">Select</button></span></li>
-        `;
+        console.log("obj:", obj)
+        console.log("rooms:", rooms)
+
+        var contents = `<tr><td><a href="#">${obj.room}</a></td><td>${obj.provider}</td><td>${obj.title}</td><td>${obj.year}/${obj.month}/${obj.day} ${obj.week}</td><td>${obj.start} - ${obj.end}</td><td><button type="button" id="yes" data-id="${obj.id}" class="btn btn-primary">Select</button></td></tr>`;
         booking_options.append(contents);
         $("#status").empty();
     });

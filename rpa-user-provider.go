@@ -50,7 +50,11 @@ func confirmBooking(clt *sxutil.SXServiceClient, sp *api.Supply) {
 	if err != nil {
 		fmt.Println("Failed to get socket channel:", err)
 	}
-	js := `{"id":"` + strconv.FormatUint(sp.Id, 10) + `","room":"` + rm.Room + `"}`
+	js := `{"id":"` + strconv.FormatUint(sp.Id, 10) + `","year":"` + rm.Year + `","month":"` + rm.Month + `","day":"` + rm.Day + `","week":"` + rm.Week + `","start":"` + rm.Start + `","end":"` + rm.End + `","people":"` + rm.People + `","title":"` + rm.Title + `","room":"` + rm.Room + `"}`
+
+	// 暫定的
+	log.Println("js:", js)
+
 	channel.Emit("check_booking", js)
 
 	server.On("confirm_booking", func(c *gosocketio.Channel, data interface{}) {
@@ -147,6 +151,10 @@ func runSocketIOServer(sclient *sxutil.SXServiceClient) {
 		// insert record to db
 		insertReservation(year, month, day, week, start, end, people, title, uid)
 
+		// get reseravtion id
+		ridUint := getReservationIDFromUserID(uid)
+		rid := strconv.FormatUint(uint64(ridUint), 10)
+
 		rm := rpa.MeetingService{
 			Cid:    c.Id(),
 			Status: "checking",
@@ -158,6 +166,7 @@ func runSocketIOServer(sclient *sxutil.SXServiceClient) {
 			End:    end,
 			People: people,
 			Title:  title,
+			Rid:    rid,
 		}
 		b, _ := json.Marshal(rm)
 		sendDemand(sclient, "Booking meeting room", string(b))
@@ -422,9 +431,9 @@ func initUserDB() {
 	}
 
 	// テーブルが存在していた場合は削除
-	// db.DropTableIfExists(&User{})
-	// db.DropTableIfExists(&Reservation{})
-	// db.DropTableIfExists(&Propose{})
+	db.DropTableIfExists(&User{})
+	db.DropTableIfExists(&Reservation{})
+	db.DropTableIfExists(&Propose{})
 
 	db.AutoMigrate(&User{})
 	db.AutoMigrate(&Reservation{})
@@ -565,6 +574,16 @@ func getOneReservation(id int) Reservation {
 	db.First(&reservation, id)
 	db.Close()
 	return reservation
+}
+
+func getReservationIDFromUserID(uid uint) uint {
+	db, err := gorm.Open("sqlite3", "user.sqlite3")
+	if err != nil {
+		fmt.Println("Failed to open gorm:", err)
+	}
+	var reservation Reservation
+	db.Where("user_id = ?", uid).First(&reservation)
+	return reservation.ID
 }
 
 func getUserIDFromName(username string) uint {
