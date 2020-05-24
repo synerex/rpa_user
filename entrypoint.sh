@@ -1,4 +1,4 @@
 #!/bin/sh
 
 go build
-./rpa-user-provider
+./rpa_user
