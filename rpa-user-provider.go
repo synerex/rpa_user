@@ -608,6 +608,7 @@ func isIdenticalUsername(username string) bool {
 }
 
 func main() {
+	log.Printf("RPA_User(%s) built %s sha1 %s", sxutil.GitVer, sxutil.BuildTime, sxutil.Sha1Ver)
 	flag.Parse()
 
 	go sxutil.HandleSigInt()
