@@ -15,7 +15,6 @@
 rpa_user
 
 # Go module file
-go.sum
 
 # sqlite3
 *.sqlite3
